@@ -55,6 +55,31 @@ io.on('connection', function (socket) {
             //通知所有人在线状态
             io.sockets.emit('user.online', getUsers());
         })
+    //开始游戏
+    socket.on("game.start",function() {
+        var user = users[socket.id.replace("/#", '')];
+        var room = rooms[user.room];
+
+        if( room.play1 && room.play2 ){
+            //向房主发送游戏开始指令
+            socket.emit("game.start",1);
+            
+            //向玩家2发送游戏开始指令
+            socket.in(user.room).emit("game.start",2);
+
+            //修改玩家的状态
+            room.play1.status = 3;
+            room.play2.status = 3;
+
+            //向所有人广播
+            io.sockets.emit("user.online",getUsers());
+        }    
+})
+    //游戏数据交换指令
+    socket.on("game.changedata",function(data) {
+        var user = users[socket.id.replace("/#",'')];
+        socket.in(user.room).emit("game.changedata",data);  
+    });
     socket.on('disconnect', function () {
         delete users[socket.id.replace("/#", '')];
         io.sockets.emit('user.online', getUsers());
