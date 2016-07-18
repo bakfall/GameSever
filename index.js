@@ -80,6 +80,36 @@ io.on('connection', function (socket) {
         var user = users[socket.id.replace("/#",'')];
         socket.in(user.room).emit("game.changedata",data);  
     });
+    //游戏结束指令
+    socket.on("game.over",function() {
+        //找到玩家
+        var user  = users[socket.id.replace("/#",'')];
+        var room = rooms[user.room];
+
+        var winner = user.id == room.play1.id ? room.play1 : room.play2;
+        var loser = user.id == room.play1.id ?room.play2 : room.play1;
+
+        //更新状态
+        winner.win += 1; 
+        winner.total += 1;
+        winner .status = 2;
+
+        loser.total += 1;
+        loser.status = 2;
+
+        //返回游戏结束指令
+        socket.emit("game.over",winner);
+        socket.in(user.room).emit("game.over",loser);
+        
+        //向两位玩家发送一条系统消息
+        io.sockets.in(user.room).emit("chat.newchat",{
+            nickname : '系统消息',
+            msg : winner.nickname + "赢了"
+        });
+
+        //向所有人广播
+        io.sockets.emit("user.online",getUsers());
+});
     socket.on('disconnect', function () {
         delete users[socket.id.replace("/#", '')];
         io.sockets.emit('user.online', getUsers());
